@@ -48,7 +48,6 @@ initial begin
   //$display($time, " DATA MEMORY");
   //for (i=0;i<128;i=i+1) $display($time, " Mem[%d]: %d (%b)", i, $signed(my_cpu.m_data_memory.mem_array[i]), my_cpu.m_data_memory.mem_array[i]);
 
-  /*
   $display($time, " HARDWARE COUNTERS");
   $display($time, " CORE_CYCLE: %d", my_cpu.CORE_CYCLE);
 
@@ -57,7 +56,6 @@ initial begin
 
   $display($time, " BP_CORRECT: %d", my_cpu.BP_CORRECT);
   $display($time, " BP_INCORRECT: %d", my_cpu.NUM_COND_BRANCHES - my_cpu.BP_CORRECT);
-  */
 
   $finish;
 end

@@ -9,6 +9,18 @@ module simple_cpu
 
 
 ////////////////////////////////////////////////////
+// CORE CYCLE (ADDED FROM LAB 3 PR)
+////////////////////////////////////////////////////
+
+wire [31:0] CORE_CYCLE;
+hardware_counter m_core_cycle(
+  .clk(clk),
+  .rstn(rstn),
+  .cond(1'b1),
+  .counter(CORE_CYCLE)
+);
+
+////////////////////////////////////////////////////
 // Instruction Fetch (IF)
 ////////////////////////////////////////////////////
 
@@ -41,6 +53,29 @@ instruction_memory m_instruction_memory(
   .address    (PC),
 
   .instruction(instruction)
+);
+
+
+// DONGHOON'S BRANCH HARDWARE IMPLEMENTATION
+
+wire pred_hit, pred_pred;
+wire [31:0] pred_branch_target;
+
+branch_hardware donghoon_branch_hardware(
+  // input spec
+  .clk                (clk),
+  .rstn               (rstn),
+  .update_predictor   (opcode == 7'b1100011 || opcode == 7'b1101111 || opcode == 7'b1100111), // Lab 1로 베이스를 하면서 이건 그냥 explicit하게 넣어주자
+  .update_btb         (taken), // Note that only taken branches (or jumps) are stored in the BTB
+  .actually_taken     (taken), // resolve는 Mem에서 한다고 함
+  .resolved_pc        (NEXT_PC), // resolve는 Mem에서 한다고 함
+  .resolved_pc_target (sextimm_sum), // resolve는 Mem에서 한다고 함
+  .pc                 (PC), //if i were building my codebase upon the full verstion, since if_PC == PC
+
+  // output spec
+  .hit                (pred_hit),
+  .pred               (pred_pred),
+  .branch_target      (pred_branch_target)
 );
 
 ////////////////////////////////////////////////////
@@ -180,28 +215,6 @@ branch_control m_branch_control(
   .check(alu_check),
 
   .taken(taken)
-);
-
-// DONGHOON'S BRANCH HARDWARE IMPLEMENTATION
-
-wire pred_hit, pred_pred;
-wire [31:0] pred_branch_target;
-
-branch_hardware donghoon_branch_hardware(
-  // input spec
-  .clk                (clk),
-  .rstn               (rstn),
-  .update_predictor   (opcode == 7'b1100011 || opcode == 7'b1101111 || opcode == 7'b1100111), // flag를 만들어서 latch해줌
-  .update_btb         (taken), // Note that only taken branches (or jumps) are stored in the BTB
-  .actually_taken     (taken), // resolve는 Mem에서 한다고 함
-  .resolved_pc        (NEXT_PC), // resolve는 Mem에서 한다고 함
-  .resolved_pc_target (sextimm_sum), // resolve는 Mem에서 한다고 함
-  .pc                 (PC), //if i were building my codebase upon the full verstion, since if_PC == PC
-
-  // output spec
-  .hit                (pred_hit),
-  .pred               (pred_pred),
-  .branch_target      (pred_branch_target)
 );
 
 ///////////////////////////////////////////////////////////////////////////////
