@@ -37,17 +37,17 @@ assign target_address = branch_target_address[pc[9:2]];
 // TODO: Implement BTB
 
 always @(*) begin
-  // INITIALIZATION: For an active low reset, all the entries in the BTB must be invalid (0).
-  if (rstn == 1'b0) begin
-    valid = 256'b0;
-  end
   // UPDATING BTB
-  else begin
+  if (rstn == 1'b1) begin
     if (update) begin
       valid[resolved_pc[9:2]] = 1'b1;
       tag[resolved_pc[9:2]] = resolved_pc[31:10];
       branch_target_address[resolved_pc[9:2]] = resolved_pc_target;
     end
+  end
+  // INITIALIZATION: For an active low reset, all the entries in the BTB must be invalid (0).
+  else begin
+    valid = 256'b0;
   end
 end
 

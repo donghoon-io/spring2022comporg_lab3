@@ -36,16 +36,7 @@ assign pred = (pht[bht ^ pc[9:2]] == 2'b11 || pht[bht ^ pc[9:2]] == 2'b10) ? 1'b
 integer i=0;
 
 always @(*) begin
-  if (rstn == 1'b0) begin
-    // Each 2-bit counter in the PHT must be initialized to  `weakly NT (01)`.
-    for (i=0; i<256;i=i+1) begin
-      pht[i] = 2'b01;
-    end
-    
-    // All the entries in the BHR must be initialized to zero (i.e., not taken).
-    bht = 8'd0;
-  end
-  else begin
+  if (rstn == 1'b1) begin
     if (update) begin
       // XOR into tag + pht + btb
       // BHR ^ BTB
@@ -63,6 +54,15 @@ always @(*) begin
       end
       bht = {bht[6:0], actually_taken};
     end
+  end
+  else begin
+    // Each 2-bit counter in the PHT must be initialized to  `weakly NT (01)`.
+    for (i=0; i<256;i=i+1) begin
+      pht[i] = 2'b01;
+    end
+    
+    // All the entries in the BHR must be initialized to zero (i.e., not taken).
+    bht = 8'd0;
   end
 end
 
