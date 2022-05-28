@@ -182,6 +182,28 @@ branch_control m_branch_control(
   .taken(taken)
 );
 
+// DONGHOON'S BRANCH HARDWARE IMPLEMENTATION
+
+wire pred_hit, pred_pred;
+wire [31:0] pred_branch_target;
+
+branch_hardware donghoon_branch_hardware(
+  // input spec
+  .clk                (clk),
+  .rstn               (rstn),
+  .update_predictor   (opcode == 7'b1100011 || opcode == 7'b1101111 || opcode == 7'b1100111), // flag를 만들어서 latch해줌
+  .update_btb         (taken), // Note that only taken branches (or jumps) are stored in the BTB
+  .actually_taken     (taken), // resolve는 Mem에서 한다고 함
+  .resolved_pc        (NEXT_PC), // resolve는 Mem에서 한다고 함
+  .resolved_pc_target (sextimm_sum), // resolve는 Mem에서 한다고 함
+  .pc                 (PC), //if i were building my codebase upon the full verstion, since if_PC == PC
+
+  // output spec
+  .hit                (pred_hit),
+  .pred               (pred_pred),
+  .branch_target      (pred_branch_target)
+);
+
 ///////////////////////////////////////////////////////////////////////////////
 // TODO : Currently, NEXT_PC is always PC_PLUS_4. Using adders and muxes &  (DONE)
 // control signals, compute & assign the correct NEXT_PC.

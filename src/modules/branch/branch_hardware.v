@@ -22,11 +22,38 @@ module branch_hardware #(
   // access interface
   input [DATA_WIDTH-1:0] pc,
 
-  output reg hit,          // btb hit or not
-  output reg pred,         // predicted taken or not
-  output reg [DATA_WIDTH-1:0] branch_target  // branch target address for a hit
+  output hit,          // btb hit or not
+  output pred,         // predicted taken or not
+  output [DATA_WIDTH-1:0] branch_target  // branch target address for a hit
 );
 
 // TODO: Instantiate a branch predictor and a BTB.
+
+branch_target_buffer m_branch_target_buffer (
+	.clk (clk),
+	.rstn (rstn),
+	
+	.update (update_btb),
+	.resolved_pc (resolved_pc),
+	.resolved_pc_target (resolved_pc_target),
+	
+	.pc (pc),
+	
+	.hit (hit),
+	.target_address (branch_target)
+);
+
+gshare m_predictor (
+	.clk (clk),
+	.rstn (rstn),
+	
+	.update (update_predictor),
+	.actually_taken (actually_taken),
+	.resolved_pc (resolved_pc),
+	
+	.pc (pc),
+	
+	.pred (pred)
+);
 
 endmodule

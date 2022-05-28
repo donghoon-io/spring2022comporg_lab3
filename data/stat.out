@@ -1,0 +1,30 @@
+WARNING: src/modules/memory/instruction_memory.v:13: $readmemb(data/inst.mem): Not enough words in the file for the requested range [0:511].
+WARNING: src/modules/memory/data_memory.v:19: $readmemh(data/data_memory.mem): Not enough words in the file for the requested range [0:8191].
+File has 21 instrs
+Last PC is 80
+                   0 ** Start Simulation **
+                   0 Instruction Memory 
+VCD info: dumpfile sim.vcd opened for output.
+                   0 [PC] pc :          x
+                   5 [PC] pc :          0
+                  65 [PC] pc :          4
+                  75 [PC] pc :          8
+                  85 [PC] pc :         12
+                  95 [PC] pc :         16
+                 105 [PC] pc :         20
+                 115 [PC] pc :         24
+                 125 [PC] pc :         28
+                 135 [PC] pc :         32
+                 145 [PC] pc :         36
+                 155 [PC] pc :         40
+                 165 [PC] pc :         52
+                 175 [PC] pc :         56
+                 185 [PC] pc :         60
+                 195 [PC] pc :         64
+                 205 [PC] pc :         68
+                 215 [PC] pc :         72
+                 225 [PC] pc :         76
+** VVP Stop(0) **
+** Flushing output streams.
+** Current simulation time is 3142923500 ticks.
+** Continue **
