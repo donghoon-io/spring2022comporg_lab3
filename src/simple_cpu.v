@@ -1,14 +1,5 @@
 // simple_cpu.v
-// a pipelined RISC-V microarchitecture (RV32I)
-
-///////////////////////////////////////////////////////////////////////////////////////////
-//// [*] In simple_cpu.v you should connect the correct wires to the correct ports
-////     - All modules are given so there is no need to make new modules
-////       (it does not mean you do not need to instantiate new modules)
-////     - However, you may have to fix or add in / out ports for some modules
-////     - In addition, you are still free to instantiate simple modules like multiplexers,
-////       adders, etc.
-///////////////////////////////////////////////////////////////////////////////////////////
+// a single-cycle RISC-V microarchitecture (RV32I)
 
 module simple_cpu
 #(parameter DATA_WIDTH = 32)(
@@ -16,260 +7,266 @@ module simple_cpu
   input rstn
 );
 
-///////////////////////////////////////////////////////////////////////////////
-// TODO:  Declare all wires / registers that are needed
-///////////////////////////////////////////////////////////////////////////////
-// e.g., wire [DATA_WIDTH-1:0] if_pc_plus_4;
-// 1) Pipeline registers (wires to / from pipeline register modules)
-// 2) In / Out ports for other modules
-// 3) Additional wires for multiplexers or other mdoules you instantiate
 
-///////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////
 // Instruction Fetch (IF)
-///////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////
 
-reg [DATA_WIDTH-1:0] PC;    // program counter (32 bits)
-
-wire [DATA_WIDTH-1:0] NEXT_PC;
 
 /* m_next_pc_adder */
-adder m_pc_plus_4_adder(
-  .in_a   (),
-  .in_b   (),
+wire [DATA_WIDTH-1:0] PC_PLUS_4;
+reg [DATA_WIDTH-1:0] PC;    // program counter (32 bits)
 
-  .result ()
+adder m_next_pc_adder(
+  .in_a(PC),
+  .in_b(32'h0000_0004),
+
+  .result(PC_PLUS_4)
 );
 
+/* pc: update program counter */
+wire [DATA_WIDTH-1:0] NEXT_PC;
+
 always @(posedge clk) begin
-  if (rstn == 1'b0) begin
-    PC <= 32'h00000000;
-  end
+  if (rstn == 1'b0) PC <= 32'h00000000;
   else PC <= NEXT_PC;
 end
 
-/* instruction: read current instruction from inst mem */
+
+/* inst_memory: memory where instruction lies */
+/* instruction: current instruction */
+wire [DATA_WIDTH-1:0] instruction;
+
 instruction_memory m_instruction_memory(
-  .address    (),
+  .address    (PC),
 
-  .instruction()
+  .instruction(instruction)
 );
 
-/* forward to IF/ID stage registers */
-ifid_reg m_ifid_reg(
-  // TODO: Add flush or stall signal if it is needed
-  .clk            (),
-  .if_PC          (),
-  .if_pc_plus_4   (),
-  .if_instruction (),
-
-  .id_PC          (),
-  .id_pc_plus_4   (),
-  .id_instruction ()
-);
-
-
-//////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////
 // Instruction Decode (ID)
-//////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////
 
-/* m_hazard: hazard detection unit */
-hazard m_hazard(
-  // TODO: implement hazard detection unit & do wiring
-);
+
+// from register file 
+wire [31:0] rs1_out, rs2_out;
+wire [31:0] alu_out;
+
+// 5 bits for each (because there exist 32 registers)
+wire [4:0] rs1, rs2, rd;
+
+wire [6:0] opcode;
+wire [6:0] funct7;
+wire [2:0] funct3;
+
+// instruction fields
+assign opcode = instruction[6:0];
+
+assign funct7 = instruction[31:25];
+assign funct3 = instruction[14:12];
+
+// R type
+assign rs1 = instruction[19:15];
+assign rs2 = instruction[24:20];
+assign rd  = instruction[11:7];
 
 /* m_control: control unit */
+wire branch;
+wire mem_read;
+wire mem_to_reg;
+wire [1:0] alu_op;
+wire mem_write;
+wire alu_src;
+wire reg_write;
+wire [1:0] jump;
+
 control m_control(
-  .opcode     (),
+  .opcode(opcode),
 
-  .jump       (),
-  .branch     (),
-  .alu_op     (),
-  .alu_src    (),
-  .mem_read   (),
-  .mem_to_reg (),
-  .mem_write  (),
-  .reg_write  ()
-);
-
-/* m_imm_generator: immediate generator */
-immediate_generator m_immediate_generator(
-  .instruction(),
-
-  .sextimm    ()
+  .jump(jump),
+  .branch(branch),
+  .mem_read(mem_read),
+  .mem_to_reg(mem_to_reg),
+  .alu_op(alu_op),
+  .mem_write(mem_write),
+  .alu_src(alu_src),
+  .reg_write(reg_write)
 );
 
 /* m_register_file: register file */
+wire [DATA_WIDTH-1:0] write_data; 
+wire [DATA_WIDTH-1:0] read_data;
+
 register_file m_register_file(
-  .clk        (),
-  .readreg1   (),
-  .readreg2   (),
-  .writereg   (),
-  .wen        (),
-  .writedata  (),
-
-  .readdata1  (),
-  .readdata2  ()
+  .clk(clk),
+  .readreg1(rs1),
+  .readreg2(rs2),
+  .writereg(rd),
+  .wen(reg_write),
+  .writedata(write_data),
+  
+  .readdata1(rs1_out),
+  .readdata2(rs2_out)
 );
 
-/* forward to ID/EX stage registers */
-idex_reg m_idex_reg(
-  // TODO: Add flush or stall signal if it is needed
-  .clk          (),
-  .id_PC        (),
-  .id_pc_plus_4 (),
-  .id_jump      (),
-  .id_branch    (),
-  .id_aluop     (),
-  .id_alusrc    (),
-  .id_memread   (),
-  .id_memwrite  (),
-  .id_memtoreg  (),
-  .id_regwrite  (),
-  .id_sextimm   (),
-  .id_funct7    (),
-  .id_funct3    (),
-  .id_readdata1 (),
-  .id_readdata2 (),
-  .id_rs1       (),
-  .id_rs2       (),
-  .id_rd        (),
+///////////////////////////////////////////////////////////////////////////////
+// TODO : Immediate Generator (DONE)
+//////////////////////////////////////////////////////////////////////////////
 
-  .ex_PC        (),
-  .ex_pc_plus_4 (),
-  .ex_jump      (),
-  .ex_branch    (),
-  .ex_aluop     (),
-  .ex_alusrc    (),
-  .ex_memread   (),
-  .ex_memwrite  (),
-  .ex_memtoreg  (),
-  .ex_regwrite  (),
-  .ex_sextimm   (),
-  .ex_funct7    (),
-  .ex_funct3    (),
-  .ex_readdata1 (),
-  .ex_readdata2 (),
-  .ex_rs1       (),
-  .ex_rs2       (),
-  .ex_rd        ()
+wire [DATA_WIDTH-1:0] sextimm_main;
+
+immediate_generator sextimm_imm(
+  .instruction(instruction),
+
+  .sextimm(sextimm_main)
 );
 
-//////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////
 // Execute (EX) 
-//////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////
 
-/* m_branch_target_adder: PC + imm for branch address */
-adder m_branch_target_adder(
-  .in_a   (),
-  .in_b   (),
 
-  .result ()
+/* m_ALU_control: ALU control unit */
+wire [3:0] alu_func;
+
+alu_control m_ALU_control(
+  .alu_op(alu_op), 
+  .funct7(funct7),
+  .funct3(funct3),
+
+  .alu_func(alu_func)
 );
 
-/* m_branch_control : checks T/NT */
-branch_control m_branch_control(
-  .branch (),
-  .check  (),
-  
-  .taken  ()
+wire [31:0] alu_in2;
+
+///////////////////////////////////////////////////////////////////////////////
+// TODO : Need a fix (DONE)
+//////////////////////////////////////////////////////////////////////////////
+mux_2x1 mux_alu(
+  .select(alu_src),
+  .in1(rs2_out),
+  .in2(sextimm_main),
+  .out(alu_in2)
 );
 
-/* alu control : generates alu_func signal */
-alu_control m_alu_control(
-  .alu_op   (),
-  .funct7   (),
-  .funct3   (),
+//////////////////////////////////////////////////////////////////////////////
 
-  .alu_func ()
-);
+/* m_ALU: ALU */
+wire [31:0] alu_in1;
+wire alu_check;
 
-/* m_alu */
-alu m_alu(
-  .alu_func (),
-  .in_a     (), 
-  .in_b     (), 
+assign alu_in1 = rs1_out;
 
-  .result   (),
-  .check    ()
-);
+alu m_ALU(
+  .in_a(alu_in1), 
+  .in_b(alu_in2), // is input with reg allowed?? 
+  .alu_func(alu_func),
 
-forwarding m_forwarding(
-  // TODO: implement forwarding unit & do wiring
-);
-
-/* forward to EX/MEM stage registers */
-exmem_reg m_exmem_reg(
-  // TODO: Add flush or stall signal if it is needed
-  .clk            (),
-  .ex_pc_plus_4   (),
-  .ex_pc_target   (),
-  .ex_taken       (), 
-  .ex_jump        (),
-  .ex_memread     (),
-  .ex_memwrite    (),
-  .ex_memtoreg    (),
-  .ex_regwrite    (),
-  .ex_alu_result  (),
-  .ex_writedata   (),
-  .ex_funct3      (),
-  .ex_rd          (),
-  
-  .mem_pc_plus_4  (),
-  .mem_pc_target  (),
-  .mem_taken      (), 
-  .mem_jump       (),
-  .mem_memread    (),
-  .mem_memwrite   (),
-  .mem_memtoreg   (),
-  .mem_regwrite   (),
-  .mem_alu_result (),
-  .mem_writedata  (),
-  .mem_funct3     (),
-  .mem_rd         ()
+  // output
+  .result(alu_out),
+  .check(alu_check)
 );
 
 
-//////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////
 // Memory (MEM) 
-//////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////
 
-/* m_data_memory : main memory module */
+/* m_branch_control: generate taken for branch instruction */
+wire taken;
+
+branch_control m_branch_control(
+  .branch(branch),
+  .check(alu_check),
+
+  .taken(taken)
+);
+
+///////////////////////////////////////////////////////////////////////////////
+// TODO : Currently, NEXT_PC is always PC_PLUS_4. Using adders and muxes &  (DONE)
+// control signals, compute & assign the correct NEXT_PC.
+//////////////////////////////////////////////////////////////////////////////
+wire [DATA_WIDTH-1:0] sextimm_sum, sextimm_rs1_sum;
+reg [DATA_WIDTH-1:0] sextimm_sum_result;
+
+adder add_sextimm_sum(
+  .in_a(PC),
+  .in_b(sextimm_main),
+  .result(sextimm_sum)
+);
+adder add_sextimm_rs1_sum(
+  .in_a(rs1_out),
+  .in_b(sextimm_main),
+  .result(sextimm_rs1_sum)
+);
+
+always @(*) begin
+  case (jump)
+    {1'b0, 1'b0}: begin
+      case (taken)
+      1'b1: begin
+        sextimm_sum_result = sextimm_sum;
+      end
+      1'b0: begin
+        sextimm_sum_result = PC_PLUS_4;
+      end
+      default: begin
+        sextimm_sum_result = PC_PLUS_4;
+      end
+      endcase
+    end
+    {1'b1, 1'b0}: begin
+      sextimm_sum_result = sextimm_sum;
+    end
+    {1'b0, 1'b1}: begin
+      sextimm_sum_result = (sextimm_rs1_sum/2) << 1;
+    end
+      default: begin
+        sextimm_sum_result = PC_PLUS_4;
+      end
+  endcase
+end
+assign NEXT_PC = sextimm_sum_result;
+
+wire ex_is_lui, ex_is_auipc;
+wire [DATA_WIDTH-1:0] alu_out_final;
+
+assign is_lui = (opcode == 7'b0110111);
+assign is_auipc = (opcode == 7'b0010111);
+
+assign alu_out_final = (!is_lui && !is_auipc) ? alu_out : (is_lui ? sextimm_main : sextimm_sum);
+
+///////////////////////////////////////////////////////////////////////////////
+// TODO : Feed the appropriate inputs to the data memory (DONE)
+//////////////////////////////////////////////////////////////////////////////
+/* m_data_memory: data memory */
 data_memory m_data_memory(
-  .clk         (),
-  .address     (),
-  .write_data  (),
-  .mem_read    (),
-  .mem_write   (),
-  .maskmode    (),
-  .sext        (),
+  .clk(clk),
+  .mem_write(mem_write),
+  .mem_read(mem_read),
+  .maskmode(funct3[1:0]), //unsure
+  .sext(funct3[2]), //unsure
+  .address(alu_out_final),
+  .write_data(rs2_out),
 
-  .read_data   ()
+  .read_data(read_data)
 );
+//////////////////////////////////////////////////////////////////////////////
 
-/* forward to MEM/WB stage registers */
-memwb_reg m_memwb_reg(
-  // TODO: Add flush or stall signal if it is needed
-  .clk            (),
-  .mem_pc_plus_4  (),
-  .mem_jump       (),
-  .mem_memtoreg   (),
-  .mem_regwrite   (),
-  .mem_readdata   (),
-  .mem_alu_result (),
-  .mem_rd         (),
 
-  .wb_pc_plus_4   (),
-  .wb_jump        (),
-  .wb_memtoreg    (),
-  .wb_regwrite    (),
-  .wb_readdata    (),
-  .wb_alu_result  (),
-  .wb_rd          ()
-);
-
-//////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////
 // Write Back (WB) 
-//////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////
 
+///////////////////////////////////////////////////////////////////////////////
+// TODO : Need a fix (DONE)
+//////////////////////////////////////////////////////////////////////////////
+mux_2x1 mux_wb(
+  .select(jump == {2{1'b0}} ? 1'b0:1'b1),
+  .in1(mem_to_reg == 1'b0 ? alu_out_final:read_data),
+  .in2(PC_PLUS_4),
+  .out(write_data)
+);
 
+//////////////////////////////////////////////////////////////////////////////
 endmodule
