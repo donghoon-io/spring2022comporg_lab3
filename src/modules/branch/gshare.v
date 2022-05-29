@@ -31,9 +31,7 @@ reg [1:0] pht [255:0]; // Each entry in the PHT has a 2-bit **saturating counter
 assign pred = (pht[bht ^ pc[9:2]] == 2'b11 || pht[bht ^ pc[9:2]] == 2'b10) ? 1'b1 : 1'b0;
 
 // TODO: Implement gshare branch predictor
-
 // 11 <-> 10 <-> 01 <-> 00
-integer i=0;
 
 always @(*) begin
   if (rstn == 1'b1) begin
@@ -57,7 +55,7 @@ always @(*) begin
   end
   else begin
     // Each 2-bit counter in the PHT must be initialized to  `weakly NT (01)`.
-    for (i=0; i<256;i=i+1) begin
+    for (integer i=0; i<256; i=i+1) begin
       pht[i] = 2'b01;
     end
     
