@@ -9,7 +9,7 @@ module simple_cpu
 
 
 ////////////////////////////////////////////////////
-// CORE CYCLE (ADDED FROM LAB 3 PR)
+// BENCHMARK METRIC (ADDED FROM LAB 3 PR)
 ////////////////////////////////////////////////////
 
 wire [31:0] CORE_CYCLE;
@@ -18,6 +18,33 @@ hardware_counter m_core_cycle(
   .rstn(rstn),
   .cond(1'b1),
   .counter(CORE_CYCLE)
+);
+
+wire [31:0] NUM_COND_BRANCHES;
+hardware_counter m_num_cond_branches(
+  .clk(clk),
+  .rstn(rstn),
+  .cond(opcode == 7'b1100011),
+  .counter(NUM_COND_BRANCHES)
+);
+
+wire [31:0] NUM_UNCOND_BRANCHES;
+hardware_counter m_num_uncond_branches(
+  .clk(clk),
+  .rstn(rstn),
+  .cond(opcode == 7'b1100111 || opcode == 7'b1101111),
+  .counter(NUM_UNCOND_BRANCHES)
+);
+
+wire metric;
+assign metric = ((pred_branch_target == NEXT_PC) && pred_hit && pred_pred) || ((PC_PLUS_4 == NEXT_PC) && !(pred_hit && pred_pred)) && (opcode == 7'b1100011);
+
+wire [31:0] BP_CORRECT;
+hardware_counter m_num_bp_correct(
+  .clk(clk),
+  .rstn(rstn),
+  .cond(metric), //change
+  .counter(BP_CORRECT)
 );
 
 ////////////////////////////////////////////////////
@@ -263,7 +290,7 @@ always @(*) begin
 end
 assign NEXT_PC = sextimm_sum_result;
 
-wire ex_is_lui, ex_is_auipc;
+wire is_lui, is_auipc;
 wire [DATA_WIDTH-1:0] alu_out_final;
 
 assign is_lui = (opcode == 7'b0110111);
