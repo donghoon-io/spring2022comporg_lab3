@@ -12,7 +12,14 @@ module simple_cpu
 // BENCHMARK METRIC (ADDED FROM LAB 3 PR)
 ////////////////////////////////////////////////////
 
-wire [31:0] CORE_CYCLE;
+// Metric
+wire [31:0] CORE_CYCLE, NUM_COND_BRANCHES, NUM_UNCOND_BRANCHES, BP_CORRECT;
+
+wire is_pred_right;
+assign is_pred_right = ((pred_branch_target == NEXT_PC) && pred_hit && pred_pred) || ((PC_PLUS_4 == NEXT_PC) && !(pred_hit && pred_pred)) && (opcode == 7'b1100011);
+
+
+// Expression
 hardware_counter m_core_cycle(
   .clk(clk),
   .rstn(rstn),
@@ -20,30 +27,24 @@ hardware_counter m_core_cycle(
   .counter(CORE_CYCLE)
 );
 
-wire [31:0] NUM_COND_BRANCHES;
-hardware_counter m_num_cond_branches(
+hardware_counter m_ncb(
   .clk(clk),
   .rstn(rstn),
   .cond(opcode == 7'b1100011),
   .counter(NUM_COND_BRANCHES)
 );
 
-wire [31:0] NUM_UNCOND_BRANCHES;
-hardware_counter m_num_uncond_branches(
+hardware_counter m_nub(
   .clk(clk),
   .rstn(rstn),
   .cond(opcode == 7'b1100111 || opcode == 7'b1101111),
   .counter(NUM_UNCOND_BRANCHES)
 );
 
-wire metric;
-assign metric = ((pred_branch_target == NEXT_PC) && pred_hit && pred_pred) || ((PC_PLUS_4 == NEXT_PC) && !(pred_hit && pred_pred)) && (opcode == 7'b1100011);
-
-wire [31:0] BP_CORRECT;
-hardware_counter m_num_bp_correct(
+hardware_counter m_nbc(
   .clk(clk),
   .rstn(rstn),
-  .cond(metric), //change
+  .cond(is_pred_right),
   .counter(BP_CORRECT)
 );
 
@@ -92,7 +93,7 @@ branch_hardware donghoon_branch_hardware(
   // input spec
   .clk                (clk),
   .rstn               (rstn),
-  .update_predictor   (opcode == 7'b1100011 || opcode == 7'b1101111 || opcode == 7'b1100111), // Lab 1로 베이스를 하면서 이건 그냥 explicit하게 넣어주자
+  .update_predictor   (opcode == 7'b1100011), // Lab 1로 베이스를 하면서 이건 그냥 explicit하게 넣어주자
   .update_btb         (taken), // Note that only taken branches (or jumps) are stored in the BTB
   .actually_taken     (taken), // resolve는 Mem에서 한다고 함
   .resolved_pc        (NEXT_PC), // resolve는 Mem에서 한다고 함
