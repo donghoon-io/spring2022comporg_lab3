@@ -29,31 +29,25 @@ module branch_hardware #(
 
 // TODO: Instantiate a branch predictor and a BTB.
 
-branch_target_buffer m_branch_target_buffer (
+gshare gs (
 	.clk (clk),
 	.rstn (rstn),
-	
-	.update (update_btb),
-	.resolved_pc (resolved_pc),
-	.resolved_pc_target (resolved_pc_target),
-	
-	.pc (pc),
-	
-	.hit (hit),
-	.target_address (branch_target)
-);
-
-gshare m_predictor (
-	.clk (clk),
-	.rstn (rstn),
-	
 	.update (update_predictor),
 	.actually_taken (actually_taken),
 	.resolved_pc (resolved_pc),
-	
 	.pc (pc),
-	
 	.pred (pred)
+);
+
+branch_target_buffer btb (
+	.clk (clk),
+	.rstn (rstn),
+	.update (update_btb),
+	.resolved_pc (resolved_pc),
+	.resolved_pc_target (resolved_pc_target),
+	.pc (pc),
+	.hit (hit),
+	.target_address (branch_target)
 );
 
 endmodule
